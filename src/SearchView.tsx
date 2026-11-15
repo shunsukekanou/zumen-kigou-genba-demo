@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { byId, TAGS } from './data'
 import { search, type Box, type Hit } from './match'
 import { SAMPLE_CARDS, makeSample } from './samples'
-import { Detail, Glyph } from './ui'
+import { Detail, Glyph, Layer } from './ui'
 
 const MAX_SIDE = 900
 
@@ -99,6 +99,7 @@ export default function SearchView() {
   }
   function up() { drag.current = null }
 
+  const openEntry = open ? byId(open) : undefined
   const shown = hits ? hits.slice(0, 3) : []
   const css = box && src ? {
     left: `${(box.x / src.width) * 100}%`, top: `${(box.y / src.height) * 100}%`,
@@ -142,16 +143,15 @@ export default function SearchView() {
             {shown.map((h, i) => {
               const e = byId(h.id)!
               const f = fitLabel(h.score)
-              const isOpen = open === h.id || (open === null && i === 0)
               return (
                 <li key={h.id} className={'hit ' + f.cls}>
-                  <button className="hit-head" onClick={() => setOpen(isOpen ? '' : h.id)} aria-expanded={isOpen}>
+                  <button className="hit-head" onClick={() => setOpen(h.id)} data-testid="hit">
                     <span className="rank">{i + 1}</span>
                     {e.glyph && <Glyph id={e.glyph} size={44} />}
-                    <span className="hit-name"><b>{e.name}</b><small>{e.cat}　{f.text}</small></span>
+                    <span className="hit-name"><b>{e.name}</b><small>{e.cat}　{f.text}</small><em>{e.shape}</em></span>
                     <span className="bar" aria-hidden><i style={{ width: `${Math.max(4, Math.min(100, h.score * 100))}%` }} /></span>
+                    <span className="chev" aria-hidden>›</span>
                   </button>
-                  {isOpen && <Detail e={e} compact />}
                 </li>
               )
             })}
@@ -161,6 +161,12 @@ export default function SearchView() {
         </>
       ) : (
         <div className="empty">まだ画像がありません。上の3つのボタンのどれかを押してください。</div>
+      )}
+
+      {openEntry && (
+        <Layer onClose={() => setOpen(null)} backLabel="候補に戻る">
+          <Detail e={openEntry} />
+        </Layer>
       )}
 
       <details className="assist">

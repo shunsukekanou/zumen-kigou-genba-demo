@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CATS, CAT_NOTE, ENTRIES, type Cat, type Entry } from './data'
-import { CheckBadge, Detail, Glyph } from './ui'
+import { CheckBadge, Detail, Glyph, Layer } from './ui'
 
 function norm(s: string): string {
   return s.toLowerCase().normalize('NFKC').replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60)).replace(/\s+/g, '')
@@ -20,10 +20,12 @@ export default function ListView() {
     return ENTRIES.filter((e) => (cat === 'すべて' || e.cat === cat) && words.every((w) => hay(e).includes(w)))
   }, [cat, q])
 
+  const opened = open ? ENTRIES.find((e) => e.id === open) : undefined
+
   return (
     <section className="panel" aria-label="JIS図面記号 一覧表">
       <h2>JIS図面記号 一覧表</h2>
-      <p className="lead">カテゴリを選ぶか、言葉で探します。タップすると、意味・「品物のどの形状のどの部分の精度か」・測り方が開きます。</p>
+      <p className="lead">カテゴリを選ぶか、言葉で探します。項目をタップすると、意味・「品物のどの形状のどの部分の精度か」・測り方の画面が重なって開き、「戻る」で選び直せます。</p>
 
       <div className="btn-row">
         <button className={'btn' + (table ? ' primary' : ' accent')} onClick={() => setTable(!table)} data-testid="table-btn" aria-pressed={table}>
@@ -47,7 +49,7 @@ export default function ListView() {
             <thead><tr><th>記号</th><th>名前</th><th>種類</th><th>意味</th><th>規格</th></tr></thead>
             <tbody>
               {list.map((e) => (
-                <tr key={e.id}>
+                <tr key={e.id} className="clickable" onClick={() => setOpen(e.id)}>
                   <td className="tg">{e.glyph ? <Glyph id={e.glyph} size={34} /> : '—'}</td>
                   <td><b>{e.name}</b><div className="muted small">{e.yomi}</div></td>
                   <td>{e.cat}</td>
@@ -61,17 +63,21 @@ export default function ListView() {
       ) : (
         <ul className="cards">
           {list.map((e) => (
-            <li key={e.id} className={'card' + (open === e.id ? ' open' : '')}>
-              <button className="card-head" onClick={() => setOpen(open === e.id ? null : e.id)} aria-expanded={open === e.id}>
+            <li key={e.id} className="card">
+              <button className="card-head" onClick={() => setOpen(e.id)} data-testid="card">
                 {e.glyph ? <Glyph id={e.glyph} size={46} /> : <span className="glyph txt">{e.cat.slice(0, 2)}</span>}
                 <span className="card-name"><b>{e.name}</b><small>{e.cat}　{e.yomi}</small></span>
-                <span className="chev" aria-hidden>{open === e.id ? '▲' : '▼'}</span>
+                <span className="chev" aria-hidden>›</span>
               </button>
-              {open === e.id && <Detail e={e} />}
             </li>
           ))}
           {list.length === 0 && <li className="empty">見つかりません。言葉を短くするか、カテゴリを「すべて」にしてください。</li>}
         </ul>
+      )}
+      {opened && (
+        <Layer onClose={() => setOpen(null)} backLabel="一覧に戻る">
+          <Detail e={opened} />
+        </Layer>
       )}
     </section>
   )

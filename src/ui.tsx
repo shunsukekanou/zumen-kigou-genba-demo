@@ -1,7 +1,44 @@
+import { useEffect, useRef, type ReactNode } from 'react'
 import { GLYPHS, SCENES, glyphSvg } from './glyphs'
 import type { Entry } from './data'
 
-export function Glyph({ id, size = 56, color = '#1d2b53' }: { id: string; size?: number; color?: string }) {
+/** 項目を選んだとき、一覧の上に重ねて全画面で表示する層。「戻る」ボタン・Escキー・端末の戻る操作で閉じる */
+export function Layer({ onClose, backLabel, children }: { onClose: () => void; backLabel: string; children: ReactNode }) {
+  const btn = useRef<HTMLButtonElement>(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    try { history.pushState({ layer: 1 }, '') } catch { /* 履歴が使えなくても、ボタンで閉じられる */ }
+    const onPop = () => closeRef.current()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('popstate', onPop)
+    window.addEventListener('keydown', onKey)
+    btn.current?.focus()
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('popstate', onPop)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
+  function close() {
+    if (history.state?.layer) history.back() // 端末の「戻る」と同じ動き（popstate で閉じる）
+    else closeRef.current()
+  }
+  return (
+    <div className="layer" role="dialog" aria-modal="true" data-testid="layer">
+      <div className="layer-bar">
+        <button ref={btn} className="back" onClick={close} data-testid="back">← {backLabel}</button>
+      </div>
+      <div className="layer-body">{children}
+        <button className="back bottom" onClick={close}>← {backLabel}</button>
+      </div>
+    </div>
+  )
+}
+
+export function Glyph({ id, size = 56, color = '#14264d' }: { id: string; size?: number; color?: string }) {
   if (!GLYPHS[id]) return null
   return <span className="glyph" style={{ width: size, height: size }} aria-hidden dangerouslySetInnerHTML={{ __html: glyphSvg(id, { size, color, sw: 6 }) }} />
 }
